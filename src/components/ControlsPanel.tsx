@@ -1,7 +1,8 @@
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Zap, Cpu, BarChart3 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Zap, Cpu } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface ControlsPanelProps {
   particleCount: number;
@@ -17,11 +18,15 @@ interface ControlsPanelProps {
   running: boolean;
   onToggleRun: () => void;
   onReset: () => void;
-  onBenchmark: () => void;
-  benchmarking: boolean;
 }
 
 const PARTICLE_STEPS = [1000, 2000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+
+const formatCount = (n: number) => {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(0)}K`;
+  return n.toString();
+};
 
 const ControlsPanel = ({
   particleCount, setParticleCount,
@@ -30,109 +35,96 @@ const ControlsPanel = ({
   collisions, setCollisions,
   mode, setMode,
   running, onToggleRun, onReset,
-  onBenchmark, benchmarking,
 }: ControlsPanelProps) => {
   const countIndex = PARTICLE_STEPS.indexOf(particleCount);
 
-  const formatCount = (n: number) => {
-    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-    if (n >= 1000) return `${(n / 1000).toFixed(0)}K`;
-    return n.toString();
-  };
-
   return (
-    <div className="flex flex-col gap-4 p-4 bg-card rounded-lg border border-glow">
-      <h2 className="text-sm font-mono font-semibold text-primary tracking-wider uppercase">
-        ⚙ Controls
-      </h2>
-
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col gap-5"
+    >
       {/* Mode Toggle */}
-      <div className="flex items-center gap-3 p-3 rounded-md bg-muted">
-        <Cpu className={`w-4 h-4 ${mode === 'cpu' ? 'text-cpu' : 'text-muted-foreground'}`} />
-        <span className={`text-xs font-mono ${mode === 'cpu' ? 'text-cpu' : 'text-muted-foreground'}`}>CPU</span>
-        <Switch
-          checked={mode === 'gpu'}
-          onCheckedChange={(v) => setMode(v ? 'gpu' : 'cpu')}
-        />
-        <Zap className={`w-4 h-4 ${mode === 'gpu' ? 'text-gpu' : 'text-muted-foreground'}`} />
-        <span className={`text-xs font-mono ${mode === 'gpu' ? 'text-gpu' : 'text-muted-foreground'}`}>Parallel</span>
+      <div className="p-4 rounded-xl card-glow border">
+        <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-3 block">
+          Execution Mode
+        </label>
+        <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-1.5 transition-colors ${mode === 'cpu' ? 'text-cpu' : 'text-muted-foreground'}`}>
+            <Cpu className="w-4 h-4" />
+            <span className="text-xs font-mono font-medium">Sequential</span>
+          </div>
+          <Switch
+            checked={mode === 'gpu'}
+            onCheckedChange={(v) => setMode(v ? 'gpu' : 'cpu')}
+          />
+          <div className={`flex items-center gap-1.5 transition-colors ${mode === 'gpu' ? 'text-gpu' : 'text-muted-foreground'}`}>
+            <Zap className="w-4 h-4" />
+            <span className="text-xs font-mono font-medium">Parallel</span>
+          </div>
+        </div>
       </div>
 
       {/* Particle Count */}
-      <div>
-        <label className="text-xs font-mono text-muted-foreground mb-2 block">
-          Particles: <span className="text-foreground">{formatCount(particleCount)}</span>
-        </label>
+      <div className="space-y-2">
+        <div className="flex justify-between items-baseline">
+          <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.15em]">Particles</label>
+          <span className="text-sm font-mono font-bold text-foreground">{formatCount(particleCount)}</span>
+        </div>
         <Slider
           value={[countIndex >= 0 ? countIndex : 0]}
           onValueChange={([v]) => setParticleCount(PARTICLE_STEPS[v])}
-          min={0}
-          max={PARTICLE_STEPS.length - 1}
-          step={1}
+          min={0} max={PARTICLE_STEPS.length - 1} step={1}
         />
+        <div className="flex justify-between text-[9px] font-mono text-muted-foreground">
+          <span>1K</span><span>1M</span>
+        </div>
       </div>
 
       {/* Gravity */}
-      <div>
-        <label className="text-xs font-mono text-muted-foreground mb-2 block">
-          Gravity: <span className="text-foreground">{gravity}</span>
-        </label>
-        <Slider
-          value={[gravity]}
-          onValueChange={([v]) => setGravity(v)}
-          min={0}
-          max={2000}
-          step={50}
-        />
+      <div className="space-y-2">
+        <div className="flex justify-between items-baseline">
+          <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.15em]">Gravity</label>
+          <span className="text-sm font-mono font-bold text-foreground">{gravity}</span>
+        </div>
+        <Slider value={[gravity]} onValueChange={([v]) => setGravity(v)} min={0} max={2000} step={50} />
       </div>
 
       {/* Time Step */}
-      <div>
-        <label className="text-xs font-mono text-muted-foreground mb-2 block">
-          Time Step (dt): <span className="text-foreground">{dt.toFixed(4)}</span>
-        </label>
-        <Slider
-          value={[dt * 10000]}
-          onValueChange={([v]) => setDt(v / 10000)}
-          min={1}
-          max={100}
-          step={1}
-        />
+      <div className="space-y-2">
+        <div className="flex justify-between items-baseline">
+          <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.15em]">Time Step</label>
+          <span className="text-sm font-mono font-bold text-foreground">{dt.toFixed(4)}</span>
+        </div>
+        <Slider value={[dt * 10000]} onValueChange={([v]) => setDt(v / 10000)} min={1} max={100} step={1} />
       </div>
 
       {/* Collisions */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-mono text-muted-foreground">Collisions</span>
+      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+        <span className="text-xs font-mono text-muted-foreground">Elastic Collisions</span>
         <Switch checked={collisions} onCheckedChange={setCollisions} />
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 pt-1">
         <Button
           onClick={onToggleRun}
-          variant="default"
-          size="sm"
-          className="flex-1 font-mono text-xs"
+          size="lg"
+          className={`flex-1 font-mono text-xs font-semibold tracking-wider ${
+            running
+              ? 'bg-destructive/20 text-destructive hover:bg-destructive/30 border border-destructive/30'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90'
+          }`}
+          variant={running ? 'outline' : 'default'}
         >
-          {running ? <Pause className="w-3 h-3 mr-1" /> : <Play className="w-3 h-3 mr-1" />}
-          {running ? 'Pause' : 'Start'}
+          {running ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+          {running ? 'PAUSE' : 'START'}
         </Button>
-        <Button onClick={onReset} variant="outline" size="sm" className="font-mono text-xs">
-          <RotateCcw className="w-3 h-3" />
+        <Button onClick={onReset} variant="outline" size="lg" className="font-mono px-4">
+          <RotateCcw className="w-4 h-4" />
         </Button>
       </div>
-
-      <Button
-        onClick={onBenchmark}
-        disabled={benchmarking}
-        variant="outline"
-        size="sm"
-        className="font-mono text-xs border-primary/30 text-primary hover:bg-primary/10"
-      >
-        <BarChart3 className="w-3 h-3 mr-1" />
-        {benchmarking ? 'Running Benchmark...' : 'Run Full Benchmark'}
-      </Button>
-    </div>
+    </motion.div>
   );
 };
 
